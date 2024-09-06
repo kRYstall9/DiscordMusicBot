@@ -2,21 +2,12 @@
 using Discord.Commands;
 using Discord.WebSocket;
 using DiscordMusicBot.Handlers;
+using DiscordMusicBot.Interfaces;
 using DiscordMusicBot.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using System;
-using System.IO;
-using System.Threading.Tasks;
 using Serilog;
 using Serilog.Events;
-using DiscordMusicBot.Interfaces;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Net.Sockets;
-using System.Text;
-using System.Text.Json;
-using System.Collections.Generic;
 
 namespace DiscordMusicBotNetCore
 {
