@@ -158,12 +158,13 @@ namespace DiscordMusicBot.Utils
                 }
             }
 
-            string footerText = tracks.Count > 1 ? $"There are {tracks.Count - i} more tracks in queue" : "No more tracks in queue";
+            string footerText = tracks.Count > i ? $"There are {tracks.Count - i} more tracks in queue" : "No more tracks in queue";
             builder.Description = description;
             builder.WithFooter(new EmbedFooterBuilder
             {
                 Text = footerText
             });
+            
             return builder.Build();
         }
 
