@@ -177,8 +177,14 @@ namespace DiscordMusicBot.Player
         private async void OnTimedEvent(Object source, ElapsedEventArgs e)
         {
             Console.WriteLine("OnTimedEvent");
+
+            if(AudioClient.ConnectionState == ConnectionState.Disconnected)
+            {
+                _timer.Stop();
+            }
+
             TimeSpan timeSpan = DateTime.Now.Subtract(_timeLastSong);
-            if(PlayingTrack == null && timeSpan.TotalMinutes > 2)
+            if((PlayingTrack == null) && (timeSpan.TotalMinutes > 2))
             {
                 Console.WriteLine("Stopping the timer");
                 await OnPlayerAFK(AudioClient);
