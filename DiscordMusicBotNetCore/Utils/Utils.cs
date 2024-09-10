@@ -1,8 +1,11 @@
 ﻿using Discord;
 using DiscordMusicBot.Common;
 using DiscordMusicBot.Source;
+using DiscordMusicBotNetCore.CommandsModels;
 using Newtonsoft.Json.Linq;
 using Serilog;
+using System.Collections;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Web;
 
@@ -168,5 +171,48 @@ namespace DiscordMusicBot.Utils
             return builder.Build();
         }
 
+        public static async Task<(Queue<AudioTrack>, string)> MoveTrack(Queue<AudioTrack> queue, int currentPos, int newPos)
+        {
+            
+            List<AudioTrack> tracks = queue.ToList();
+            AudioTrack track = tracks.ElementAt(currentPos - 1);
+            
+            tracks.Remove(track);
+            tracks.Insert(newPos - 1, track);
+            
+            return (new Queue<AudioTrack>(tracks), $"{track.AudioTrackInfo.Title} is now at position #{newPos}");
+        }
+
+        public static async Task<(Queue<AudioTrack>, string)> RemoveBetween(Queue<AudioTrack> queue, RemoveBetweenModel removeBetweenModel)
+        {
+
+            List<AudioTrack> tracks = queue.ToList();
+
+            if (removeBetweenModel.Include)
+            {
+                tracks.RemoveRange(removeBetweenModel.StartPos - 1, ((removeBetweenModel.EndPos - removeBetweenModel.StartPos)+1));
+            }
+            else
+            {
+                tracks.RemoveRange(removeBetweenModel.StartPos, ((removeBetweenModel.EndPos - removeBetweenModel.StartPos))-1);
+            }
+
+
+            bool isGreater = removeBetweenModel.EndPos > removeBetweenModel.StartPos;
+
+            int removedTracks = removeBetweenModel.Include ? (removeBetweenModel.EndPos - removeBetweenModel.StartPos + 1) : (removeBetweenModel.EndPos - removeBetweenModel.StartPos - 1);
+
+            return (new Queue<AudioTrack>(tracks), $"Removed {removedTracks} " + (isGreater ? "tracks" : "track"));
+        }
+        
+        public static async Task<Queue<AudioTrack>> RemoveTrack(Queue<AudioTrack> queue, int trackPos)
+        {
+            List<AudioTrack> trackList = queue.ToList();
+            trackList.RemoveAt(trackPos - 1);
+
+            Queue<AudioTrack> newQueue = new Queue<AudioTrack>(trackList);
+
+            return newQueue;
+        }
     }
 }

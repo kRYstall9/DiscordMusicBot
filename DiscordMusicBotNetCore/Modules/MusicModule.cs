@@ -2,6 +2,7 @@
 using Discord.Commands;
 using DiscordMusicBot.Attributes;
 using DiscordMusicBot.Interfaces;
+using DiscordMusicBotNetCore.CommandsModels;
 
 namespace DiscordMusicBot.Modules
 {
@@ -16,7 +17,7 @@ namespace DiscordMusicBot.Modules
             _audioService = audioService;
         }
 
-        [Command("join", RunMode=RunMode.Async)]
+        [Command("join", RunMode = RunMode.Async)]
         [Summary("Joins your voice channel")]
         [Usage("join")]
         [Alias("j")]
@@ -24,7 +25,7 @@ namespace DiscordMusicBot.Modules
         {
             channel = channel ?? (Context.User as IGuildUser).VoiceChannel;
 
-            if(channel == null) { await Context.Channel.SendMessageAsync("You're not in a voice channel");  return; }
+            if (channel == null) { await Context.Channel.SendMessageAsync("You're not in a voice channel"); return; }
 
             var guild = channel.Guild;
 
@@ -48,7 +49,7 @@ namespace DiscordMusicBot.Modules
             {
                 await _audioService.JoinChannel(userChannel, guild, Context.Channel);
             }
-            
+
             await _audioService.StartTrackAsync(query, guild, Context.Channel);
         }
 
@@ -63,12 +64,12 @@ namespace DiscordMusicBot.Modules
 
             if (clientVoiceChannel == null) { return; }
 
-            await _audioService.LeaveChannel(clientVoiceChannel, guild);
-            
+            await _audioService.LeaveChannel(Context.Channel, guild);
+
             Console.WriteLine($"Disconnected from {guild.Name}");
         }
 
-        [Command("skip", RunMode=RunMode.Async)]
+        [Command("skip", RunMode = RunMode.Async)]
         [Summary("Jumps to the next queued track")]
         [Usage("skip <number of songs to skip>.\n-# Default is 0 since it will skip the currently playing song")]
         public async Task SkipTrack(int songsToSkip = 0)
@@ -79,10 +80,10 @@ namespace DiscordMusicBot.Modules
 
             if (clientVoiceChannel == null) { await userChannel.SendMessageAsync("I'm not connected to any voice channel"); return; }
 
-            await _audioService.SkipTrackAsync(userChannel, guild, songsToSkip);
+            await _audioService.SkipTrackAsync(Context.Channel, guild, songsToSkip);
         }
 
-        [Command("stop",RunMode=RunMode.Async)]
+        [Command("stop", RunMode = RunMode.Async)]
         [Summary("Stops the music and clears the queue.")]
         [Usage("stop")]
         public async Task StopVoiceActivity()
@@ -93,7 +94,7 @@ namespace DiscordMusicBot.Modules
 
             if (clientVoiceChannel == null) { await userChannel.SendMessageAsync("I'm not connected to any voice channel"); return; }
 
-            await _audioService.StopVoiceActivity(clientVoiceChannel, guild);
+            await _audioService.StopVoiceActivity(Context.Channel, guild);
         }
 
         [Command("pause", RunMode = RunMode.Async)]
@@ -107,7 +108,7 @@ namespace DiscordMusicBot.Modules
 
             if (clientVoiceChannel == null) { return; }
 
-            await _audioService.PauseOrResume(clientVoiceChannel, guild, pause: true);
+            await _audioService.PauseOrResume(Context.Channel, guild, pause: true);
 
         }
 
@@ -122,7 +123,7 @@ namespace DiscordMusicBot.Modules
 
             if (clientVoiceChannel == null) { return; }
 
-            await _audioService.PauseOrResume(clientVoiceChannel, guild, pause: false);
+            await _audioService.PauseOrResume(Context.Channel, guild, pause: false);
 
         }
 
@@ -138,6 +139,59 @@ namespace DiscordMusicBot.Modules
             if (clientVoiceChannel == null) { await ReplyAsync("I'm not connected to any voice channel"); return; }
 
             await ReplyAsync(embed: await _audioService.QueueEmbed(guild));
+        }
+
+        [Command("move", RunMode = RunMode.Async)]
+        [Summary("Moves a song from the current to the desired position")]
+        [Usage("move currentPos: 1 newPos: 3")]
+        public async Task MoveTrack(MoveTrackModel moveTrackModel)
+        {
+            var guild = Context.Guild;
+            var clientVoiceChannel = guild.CurrentUser?.VoiceChannel;
+
+            if (clientVoiceChannel == null) { await ReplyAsync("I'm not connected to any voice channel"); return; }
+
+            if (moveTrackModel.CurrentPos == 0 && moveTrackModel.NewPos == 0)
+            {
+                await ReplyAsync("No changes made");
+                return;
+            }
+
+            await _audioService.MoveTrack(Context.Channel, guild, moveTrackModel);
+        }
+
+        [Command("removebetween", RunMode = RunMode.Async)]
+        [Summary("Removes tracks within the specified range. By default, the provided indexes are not included. Type `include: true` to include them")]
+        [Usage("removebetween startPos: 10 endPos:15 include: true")]
+        [Alias("rmbtw")]
+        public async Task RemoveBetween(RemoveBetweenModel removeBetweenModel)
+        {
+            var guild = Context.Guild;
+            var clientVoiceChannel = guild.CurrentUser?.VoiceChannel;
+
+            if (clientVoiceChannel == null) { await ReplyAsync("I'm not connected to any voice channel"); return; }
+
+            if (removeBetweenModel.StartPos == 0 && removeBetweenModel.EndPos == 0)
+            {
+                await ReplyAsync("No changes made");
+                return;
+            }
+
+            await _audioService.RemoveBetween(Context.Channel, guild, removeBetweenModel);
+        }
+
+        [Command("remove", RunMode = RunMode.Async)]
+        [Summary("Removes a track at the specified index")]
+        [Usage("remove 10")]
+        [Alias("rm")]
+        public async Task RemoveTrack(int? trackPos)
+        {
+            var guild = Context.Guild;
+            var clientVoiceChannel = guild.CurrentUser?.VoiceChannel;
+
+            if (clientVoiceChannel == null) { await ReplyAsync("I'm not connected to any voice channel"); return; }
+
+            await _audioService.RemoveTrack(Context.Channel, guild, trackPos);
         }
     }
 }

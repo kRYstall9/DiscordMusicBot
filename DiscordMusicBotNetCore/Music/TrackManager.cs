@@ -2,6 +2,7 @@
 using Discord.Audio;
 using DiscordMusicBot.Player;
 using DiscordMusicBot.Source;
+using DiscordMusicBotNetCore.CommandsModels;
 using Serilog;
 using static DiscordMusicBot.Utils.Utils;
 
@@ -77,22 +78,24 @@ namespace DiscordMusicBot.MusicManager
             {
                 await _audioPlayer.TextChannel.SendMessageAsync(":white_check_mark: **Queue ended**");
                 _audioPlayer.Stop();
-
             }
+            await Task.CompletedTask;
         }
 
-        private async Task OnTrackStartAsync(AudioTrack audioTrack, IMessageChannel textChannel)
+        private async Task OnTrackStartAsync(AudioTrack audioTrack, IMessageChannel messageChannel)
         {
             string title = audioTrack.AudioTrackInfo.Title;
             string duration = $"`{await ConvertDuration(audioTrack.AudioTrackInfo.Duration)}`";
             string thumbnailUrl = audioTrack.AudioTrackInfo.ThumbnailUrl;
 
-            await textChannel.SendMessageAsync(embed: await CurrentTrackEmbed(title, duration, thumbnailUrl));
+            await messageChannel.SendMessageAsync(embed: await CurrentTrackEmbed(title, duration, thumbnailUrl));
+            await Task.CompletedTask;
         }
 
         private async Task OnTrackEndAsync()
         {
             await PlayNextTrack();
+            await Task.CompletedTask;
         }
 
         public async Task SkipCurrentTrack(int songsToSkip = 0)
@@ -103,13 +106,13 @@ namespace DiscordMusicBot.MusicManager
                 {
                     TrackQueue.Dequeue();
                 }
-
             }
             catch (InvalidOperationException ex)
             {
                 Log.Error(ex.Message);
             }
             _audioPlayer.Stop();
+            await Task.CompletedTask;
         }
 
         private async Task OnPlayerAFKAsync(IAudioClient audioClient)
@@ -123,5 +126,63 @@ namespace DiscordMusicBot.MusicManager
 
             await Task.CompletedTask;
         }
+    
+        public async Task MoveTrack(IMessageChannel messageChannel , MoveTrackModel moveTrackModel)
+        {
+            if(moveTrackModel.NewPos < 0 || moveTrackModel.NewPos > TrackQueue.Count)
+            {
+                await messageChannel.SendMessageAsync($"You can only choose indexes between 1 and {TrackQueue.Count}");
+                return;
+            }
+
+            (Queue<AudioTrack>, string) result = await Utils.Utils.MoveTrack(TrackQueue, moveTrackModel.CurrentPos, moveTrackModel.NewPos);
+            TrackQueue = result.Item1;
+
+            await messageChannel.SendMessageAsync(result.Item2);
+            await Task.CompletedTask;
+        }
+    
+        public async Task RemoveBetween(IMessageChannel messageChannel, RemoveBetweenModel removeBetweenModel)
+        {
+            if (removeBetweenModel.EndPos <= removeBetweenModel.StartPos)
+            {
+                await messageChannel.SendMessageAsync(":warning: startPos cannot be greater/equal than endPos");
+                return;
+            }
+
+            if(removeBetweenModel.StartPos < 0 || removeBetweenModel.EndPos > TrackQueue.Count)
+            {
+                await messageChannel.SendMessageAsync($":warning: startPos cannot be 0 and endPos cannot be greater than {TrackQueue.Count}");
+                return;
+            }
+
+            (Queue<AudioTrack>, string) result = await Utils.Utils.RemoveBetween(TrackQueue, removeBetweenModel);
+            
+            TrackQueue = result.Item1;
+
+            await messageChannel.SendMessageAsync(result.Item2);
+
+            await Task.CompletedTask;
+        }
+
+        public async Task RemoveTrack(IMessageChannel messageChannel, int? trackPos)
+        {
+            if (!trackPos.HasValue)
+            {
+                await messageChannel.SendMessageAsync("You have to insert the track number to remove it from the queue");
+            }
+            else if (trackPos < 0 || trackPos > TrackQueue.Count)
+            {
+                await messageChannel.SendMessageAsync($"You can only remove a track between 1 and {TrackQueue.Count}");
+            }
+            else
+            {
+                TrackQueue = await Utils.Utils.RemoveTrack(TrackQueue, trackPos.Value);
+                await messageChannel.SendMessageAsync(":white_check_mark: Track removed");
+            }
+
+            await Task.CompletedTask;
+        }
     }
+
 }
